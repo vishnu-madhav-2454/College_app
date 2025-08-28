@@ -7,7 +7,7 @@ import { COLORS } from '../../constants/colors';
 
 const FacultySection = ({ title, members = [], color }) => {
   return (
-    <div className="my-10 px-4 w-full flex flex-col items-center">
+    <div className="my-10 px-4 w-full flex flex-col items-center fade-in-up">
       {/* Title section */}
       <div className="w-full max-w-8xl p-4 rounded-lg shadow-lg mb-6" style={{ backgroundColor: color }}>
         <h1 className="text-3xl font-bold text-center mb-2 text-white">
@@ -16,7 +16,7 @@ const FacultySection = ({ title, members = [], color }) => {
       </div>
 
       {/* Card container */}
-      <div className="flex flex-wrap justify-center gap-6 w-full max-w-7xl">
+      <div className="flex flex-wrap justify-center gap-6 w-full max-w-7xl stagger">
         {members.map((member, index) => (
           <FacultyCard
             key={`${title}-${index}`}
@@ -42,8 +42,8 @@ const Faculty = () => {
   ];
 
   return (
-    <PageLayout showBackground backgroundImage={logo2}>
-      <div className="space-y-10 max-w-7xl mx-auto">
+    <PageLayout>
+      <div className="space-y-10 max-w-7xl mx-auto fade-in-up">
         {facultySections.map((section) => (
           <FacultySection
             key={section.title}

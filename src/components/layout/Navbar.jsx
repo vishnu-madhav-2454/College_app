@@ -6,10 +6,12 @@ import { COLORS } from '../../constants/colors';
 
 const navItems = [
   { name: 'Home', path: '/' },
-  { name: 'Achievements', path: '/achievements' },
+  { name: 'Streams', path: '/courses' },
+  { name: 'Admissions', path: '/admissions' },
+  { name: 'Calendar', path: '/calendar' },
   { name: 'Faculty', path: '/faculty' },
   { name: 'Campuses', path: '/campuses' },
-  { name: 'Courses', path: '/courses' },
+  { name: 'Achievements', path: '/achievements' },
 ];
 
 const Navbar = () => {

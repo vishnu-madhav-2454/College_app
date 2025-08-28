@@ -12,7 +12,7 @@ const CourseCard = ({
 }) => {
   return (
     <div
-      className="max-w-[700px] shadow-xl rounded-xl relative z-10 transition-all duration-600 hover:scale-110 overflow-hidden card-hover fade-in-up"
+      className="max-w-[700px] shadow-xl rounded-xl relative transition-transform duration-500 overflow-hidden fade-in-up transform-gpu will-change-transform hover:-translate-y-1 hover:shadow-2xl"
       style={{ backgroundColor: bgColor }}
     >
       {image && (

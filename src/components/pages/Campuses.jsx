@@ -6,9 +6,9 @@ import { campusData, campusImages } from '../../data/campusData';
 
 const CampusCard = ({ title, description, mapsLink, bgColor }) => {
   return (
-    <div className="flex flex-col items-center justify-center w-full z-10">
+    <div className="flex flex-col items-center justify-center w-full z-10 fade-in-up">
       <div
-        className="w-full max-w-[1200px] rounded-xl overflow-hidden shadow-2xl transition-all duration-300"
+        className="w-full max-w-[1200px] rounded-xl overflow-hidden shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
         style={{ backgroundColor: bgColor }}
       >
         {/* Image Slider */}
@@ -43,7 +43,7 @@ const CampusCard = ({ title, description, mapsLink, bgColor }) => {
 const Campuses = () => {
   return (
     <PageLayout>
-      <div className="flex flex-col items-center justify-center space-y-10 py-10 px-4">
+      <div className="flex flex-col items-center justify-center space-y-10 py-10 px-4 fade-in-up">
         {campusData.map((campus, idx) => (
           <CampusCard
             key={campus.title}

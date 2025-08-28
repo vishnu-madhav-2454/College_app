@@ -2,7 +2,6 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import PageLayout from '../layout/PageLayout';
 import ScoreCard from '../ui/ScoreCard';
-import logo2 from '../../assets/logo2.png';
 import { achievementSections } from '../../data/achievementsData';
 
 const AchievementSection = ({
@@ -13,7 +12,7 @@ const AchievementSection = ({
   students = [],
 }) => {
   return (
-    <div className="m-4 sm:m-6 p-4 sm:p-6 rounded-lg shadow-lg bg-white w-full">
+    <div className="m-4 sm:m-6 p-4 sm:p-6 rounded-lg shadow-lg bg-white w-full fade-in-up">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3 sm:mb-4">
         <div
@@ -36,7 +35,7 @@ const AchievementSection = ({
       />
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 stagger">
         {students.map((student, idx) => (
           <ScoreCard
             key={`${name}-${idx}`}
@@ -55,8 +54,8 @@ const AchievementSection = ({
 
 const Achievements = () => {
   return (
-    <PageLayout showBackground backgroundImage={logo2}>
-      <div className="space-y-12 max-w-[1400px] mx-auto px-4 py-6">
+    <PageLayout>
+      <div className="space-y-12 max-w-[1400px] mx-auto px-4 py-6 fade-in-up">
         {achievementSections.map((section, index) => (
           <AchievementSection
             key={section.name}

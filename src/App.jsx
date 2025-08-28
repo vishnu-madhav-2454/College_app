@@ -5,6 +5,8 @@ import Achievements from './components/pages/Achievements';
 import Campuses from './components/pages/Campuses';
 import Courses from './components/pages/Courses';
 import AchievementDetails from './components/pages/AchievementDetails';
+import Admissions from './components/pages/Admissions';
+import Calendar from './components/pages/Calendar';
 
 const router = createBrowserRouter([
   {
@@ -26,6 +28,14 @@ const router = createBrowserRouter([
   {
     path: '/courses',
     element: <Courses />,
+  },
+  {
+    path: '/admissions',
+    element: <Admissions />,
+  },
+  {
+    path: '/calendar',
+    element: <Calendar />,
   },
   {
     path: '/achievements/:id',

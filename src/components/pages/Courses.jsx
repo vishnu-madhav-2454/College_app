@@ -7,7 +7,7 @@ const Courses = () => {
   return (
     <PageLayout>
       <div className="min-h-screen py-10 px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-7xl mx-auto relative z-0">
           {courseData.map((course, index) => (
             <CourseCard
               key={index}

@@ -1,9 +1,6 @@
-import React from 'react';
-import { useParams } from 'react-router-dom';
-import Card_5_1 from './Card_5_1';
-import student from '../assets/student.png'; // Main student image used
+import student from '../assets/student.png';
 
-const studentExamples = {
+export const studentExamples = {
   jeemains: {
     bgColor: '#9b0c0c',
     total: '300',
@@ -41,39 +38,3 @@ const studentExamples = {
     ],
   },
 };
-
-const AchievementDetails = () => {
-  const { id } = useParams();
-  const cleanedId = id?.toLowerCase().replace(/\s+/g, '');
-  const data = studentExamples[cleanedId];
-
-  if (!data) {
-    return (
-      <div className="min-h-screen p-10 text-center">
-        <h1 className="text-4xl font-bold text-gray-700 mb-4 capitalize">{id} Achievements</h1>
-        <p className="text-black text-lg">No achievements found for "{id}".</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen px-6 py-10">
-      <h1 className="text-4xl font-bold text-gray-800 mb-6 capitalize">{id} Achievements</h1>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        {data.students.map((student, index) => (
-          <Card_5_1
-            key={index}
-            image={student.image}
-            name={student.name}
-            hallTicket={student.hallticket}
-            score={student.rank || student.marks}
-            total={data.total}
-            bgColor={data.bgColor}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default AchievementDetails;

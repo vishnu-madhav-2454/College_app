@@ -1,14 +1,16 @@
 import React from 'react';
-import ScoreCard from './Card_5_1';
-import { NavLink } from 'react-router-dom'; 
+import { NavLink } from 'react-router-dom';
+import PageLayout from '../layout/PageLayout';
+import ScoreCard from '../ui/ScoreCard';
+import logo2 from '../../assets/logo2.png';
+import { achievementSections } from '../../data/achievementsData';
 
-const Card_5 = ({
-  name = "Top Scorers",
-  titleColor = "#9b0c0c",
-  barColor = "#9b0c0c",
-  bgColor = "#f94c10",
-  viewMoreLink = "/results",
-  students = [], 
+const AchievementSection = ({
+  name,
+  titleColor,
+  barColor,
+  bgColor,
+  students = [],
 }) => {
   return (
     <div className="m-4 sm:m-6 p-4 sm:p-6 rounded-lg shadow-lg bg-white w-full">
@@ -21,7 +23,7 @@ const Card_5 = ({
           {name}
         </div>
         <NavLink to={`/achievements/${name}`} className="w-fit">
-          <button className="text-xs sm:text-sm md:text-base font-medium text-white bg-[#333] px-3 py-1.5 rounded hover:bg-black transition">
+          <button className="text-xs sm:text-sm md:text-base font-medium text-white bg-[#333] px-3 py-1.5 rounded hover:bg-black transition-colors duration-200">
             View More
           </button>
         </NavLink>
@@ -31,13 +33,13 @@ const Card_5 = ({
       <div
         className="h-[4px] sm:h-[6px] w-full rounded-lg mb-4"
         style={{ backgroundColor: barColor }}
-      ></div>
+      />
 
       {/* Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
         {students.map((student, idx) => (
           <ScoreCard
-            key={idx}
+            key={`${name}-${idx}`}
             image={student.image}
             score={student.score}
             total={student.total}
@@ -51,5 +53,23 @@ const Card_5 = ({
   );
 };
 
-export default Card_5;
+const Achievements = () => {
+  return (
+    <PageLayout showBackground backgroundImage={logo2}>
+      <div className="space-y-12 max-w-[1400px] mx-auto px-4 py-6">
+        {achievementSections.map((section, index) => (
+          <AchievementSection
+            key={section.name}
+            name={section.name}
+            titleColor={section.titleColor}
+            barColor={section.barColor}
+            bgColor={section.bgColor}
+            students={section.students}
+          />
+        ))}
+      </div>
+    </PageLayout>
+  );
+};
 
+export default Achievements;

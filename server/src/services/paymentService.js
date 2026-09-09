@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import Razorpay from 'razorpay';
+import crypto from 'crypto';
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -31,6 +32,7 @@ export const createFeePaymentSession = async ({
       return {
         provider: 'demo',
         mode: 'demo',
+        status: 'Paid',
         amount: numericAmount,
         currency: 'inr',
         checkoutUrl: `https://demo-checkout.local/stripe?amount=${numericAmount}&student=${encodeURIComponent(studentName)}`,
@@ -73,6 +75,7 @@ export const createFeePaymentSession = async ({
       return {
         provider: 'demo',
         mode: 'demo',
+        status: 'Paid',
         amount: numericAmount,
         currency: 'INR',
         checkoutUrl: `https://demo-checkout.local/razorpay?amount=${numericAmount}&student=${encodeURIComponent(studentName)}`,
@@ -103,9 +106,35 @@ export const createFeePaymentSession = async ({
   return {
     provider: 'demo',
     mode: 'demo',
+    status: 'Paid',
     amount: numericAmount,
     currency: 'INR',
     checkoutUrl: `https://demo-checkout.local/fee?amount=${numericAmount}&student=${encodeURIComponent(studentName)}`,
     message: 'Live payment provider is not configured. Demo mode is active; connect Stripe or Razorpay to use real transactions.'
   };
+};
+
+export const verifyRazorpayPayment = ({ orderId, paymentId, signature }) => {
+  if (!process.env.RAZORPAY_KEY_SECRET) {
+    throw new Error('Razorpay secret key is not configured.');
+  }
+
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+    .update(`${orderId}|${paymentId}`)
+    .digest('hex');
+  const receivedSignature = Buffer.from(signature || '');
+  const expectedSignatureBuffer = Buffer.from(expectedSignature);
+
+  return receivedSignature.length === expectedSignatureBuffer.length
+    && crypto.timingSafeEqual(expectedSignatureBuffer, receivedSignature);
+};
+
+export const getRazorpayOrderStatus = async (orderId) => {
+  if (!razorpay) {
+    throw new Error('Razorpay is not configured.');
+  }
+
+  const order = await razorpay.orders.fetch(orderId);
+  return order.status;
 };

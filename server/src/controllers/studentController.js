@@ -1,5 +1,5 @@
-import { pool } from '../db/pgPool.js';
-import { createFeePaymentSession } from '../services/paymentService.js';
+import { pool } from '../db/connection.js';
+import { createFeePaymentSession, verifyRazorpayPayment } from '../services/paymentService.js';
 
 // Helper: get student with user join
 const getStudentByUserId = async (userId) => {
@@ -120,7 +120,7 @@ export const getStudentFees = async (req, res) => {
 
 export const payStudentFee = async (req, res) => {
   try {
-    const { amount, paymentMethod, installmentName, provider = 'demo' } = req.body;
+    const { amount, paymentMethod, installmentName, provider = 'razorpay' } = req.body;
     const student = await getStudentByUserId(req.user.id);
     if (!student) return res.status(404).json({ error: 'Student not found in PostgreSQL' });
 
@@ -153,14 +153,17 @@ export const payStudentFee = async (req, res) => {
       },
     });
 
-    const newPaid = Math.min(totalFee, currentPaid + payAmount);
+    const paymentStatus = providerCheckout.status || 'Pending';
+    const newPaid = paymentStatus === 'Paid'
+      ? Math.min(totalFee, currentPaid + payAmount)
+      : currentPaid;
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       await client.query(
         `INSERT INTO fee_payments (id, student_id, receipt_no, installment_name, amount, payment_date, payment_method, transaction_ref, status, notes)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [paymentId, student.id, receiptNo, installmentName || 'Online Installment Payment', payAmount, paymentDate, paymentMethod || providerCheckout.provider || 'UPI / NetBanking', transactionRef, 'Pending', `Payment initiated via ${providerCheckout.provider || 'demo'} provider. ${providerCheckout.message || 'Awaiting external confirmation.'}`]
+        [paymentId, student.id, receiptNo, installmentName || 'Online Installment Payment', payAmount, paymentDate, paymentMethod || providerCheckout.provider || 'UPI / NetBanking', providerCheckout.orderId || transactionRef, paymentStatus, `Payment initiated via ${providerCheckout.provider || 'demo'} provider. ${providerCheckout.message || 'Payment recorded successfully.'}`]
       );
       await client.query(`UPDATE students SET paid_fee = $1 WHERE id = $2`, [newPaid, student.id]);
       await client.query('COMMIT');
@@ -183,8 +186,8 @@ export const payStudentFee = async (req, res) => {
         amount: payAmount,
         paymentDate,
         paymentMethod: paymentMethod || providerCheckout.provider || 'UPI / NetBanking',
-        transactionRef,
-        status: 'Pending',
+        transactionRef: providerCheckout.orderId || transactionRef,
+        status: paymentStatus,
       },
       checkout: providerCheckout,
       totalFee,
@@ -194,6 +197,72 @@ export const payStudentFee = async (req, res) => {
   } catch (error) {
     console.error('payStudentFee error:', error);
     return res.status(500).json({ error: 'Failed to process fee payment in PostgreSQL' });
+  }
+};
+
+export const verifyStudentFeePayment = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { paymentId, orderId, signature, receiptId } = req.body;
+    if (!paymentId || !orderId || !signature || !receiptId) {
+      return res.status(400).json({ error: 'Missing Razorpay payment verification details.' });
+    }
+
+    if (!verifyRazorpayPayment({ orderId, paymentId, signature })) {
+      return res.status(400).json({ error: 'Razorpay payment signature could not be verified.' });
+    }
+
+    await client.query('BEGIN');
+    const receiptResult = await client.query(
+      `SELECT fp.*, s.total_fee, s.paid_fee
+       FROM fee_payments fp
+       JOIN students s ON s.id = fp.student_id
+       WHERE fp.id = $1 AND s.user_id = $2
+       FOR UPDATE`,
+      [receiptId, req.user.id]
+    );
+    if (receiptResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Payment receipt not found.' });
+    }
+
+    const receipt = receiptResult.rows[0];
+    if (receipt.status === 'Paid') {
+      await client.query('COMMIT');
+      return res.json({ success: true, status: 'Paid', receiptNo: receipt.receipt_no });
+    }
+    if (receipt.transaction_ref !== orderId) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Payment order does not match this receipt.' });
+    }
+
+    const paidFee = Math.min(
+      Number(receipt.total_fee),
+      Number(receipt.paid_fee) + Number(receipt.amount)
+    );
+    await client.query(
+      `UPDATE fee_payments
+       SET status = 'Paid', transaction_ref = $1, notes = $2
+       WHERE id = $3`,
+      [paymentId, `Razorpay payment verified for order ${orderId}.`, receiptId]
+    );
+    await client.query(`UPDATE students SET paid_fee = $1 WHERE id = $2`, [paidFee, receipt.student_id]);
+    await client.query('COMMIT');
+
+    return res.json({
+      success: true,
+      status: 'Paid',
+      receiptNo: receipt.receipt_no,
+      transactionRef: paymentId,
+      paidFee,
+      pendingFee: Number(receipt.total_fee) - paidFee
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('verifyStudentFeePayment error:', error);
+    return res.status(500).json({ error: 'Failed to verify Razorpay payment.' });
+  } finally {
+    client.release();
   }
 };
 

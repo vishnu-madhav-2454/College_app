@@ -1,4 +1,4 @@
-import { pool } from '../db/pgPool.js';
+import { pool } from '../db/connection.js';
 
 export const getHomeData = async (req, res) => {
   try {

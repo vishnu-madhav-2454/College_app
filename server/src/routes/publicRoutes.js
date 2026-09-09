@@ -1,6 +1,6 @@
 import express from 'express';
 import { getHomeData } from '../controllers/publicController.js';
-import { pool } from '../db/pgPool.js';
+import { pool } from '../db/connection.js';
 
 const router = express.Router();
 

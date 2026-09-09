@@ -1,4 +1,4 @@
-import { pool } from '../db/pgPool.js';
+import { pool } from '../db/connection.js';
 import { sendParentResultMessage } from '../services/smsService.js';
 
 // Returns today's date string in IST (YYYY-MM-DD) regardless of server timezone

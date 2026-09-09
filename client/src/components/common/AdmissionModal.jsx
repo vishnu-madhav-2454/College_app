@@ -44,7 +44,7 @@ export const AdmissionModal = ({ isOpen, onClose, preselectedProgram, defaultPro
           ...current,
           program: effectiveProgram,
           branchId: current.branchId || data.branches?.[0]?.id || '',
-          paymentAmount: current.paymentAmount || ''
+          paymentAmount: current.paymentAmount || data.programs?.find((program) => program.id === effectiveProgram)?.annualFee || ''
         }));
       })
       .catch((err) => setError(err.message));
@@ -64,6 +64,13 @@ export const AdmissionModal = ({ isOpen, onClose, preselectedProgram, defaultPro
       }
       setStep(2);
     } else if (step === 2) {
+      if (!formData.paymentAmount || Number(formData.paymentAmount) <= 0) {
+        const selectedProgram = programs.find((program) => program.id === formData.program);
+        setFormData((current) => ({
+          ...current,
+          paymentAmount: selectedProgram?.annualFee || ''
+        }));
+      }
       setStep(3);
     }
   };
@@ -87,17 +94,74 @@ export const AdmissionModal = ({ isOpen, onClose, preselectedProgram, defaultPro
         throw new Error(data.error || 'Admission application failed.');
       }
 
-      setAdmissionResult(data);
-      setStep(4);
-      try {
-        confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.6 }
-        });
-      } catch (e) {
-        // Confetti fallback
+      if (data.payment?.status === 'Paid') {
+        setAdmissionResult(data);
+        setStep(4);
+        return;
       }
+
+      if (!window.Razorpay || !data.checkout?.orderId) {
+        throw new Error('Razorpay Checkout is unavailable. Please refresh and try again.');
+      }
+
+      const razorpay = new window.Razorpay({
+        key: data.checkout.keyId,
+        amount: data.checkout.amountInPaise,
+        currency: data.checkout.currency,
+        name: 'Apex Academy',
+        description: 'Admission Seat Confirmation Fee',
+        order_id: data.checkout.orderId,
+        method: {
+          upi: true,
+          card: true,
+          netbanking: true,
+          wallet: true
+        },
+        prefill: { name: formData.studentName, email: formData.email, contact: formData.phone },
+        handler: async (response) => {
+          try {
+            const verifyResponse = await fetch('/api/admission/payment/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                paymentId: data.paymentId,
+                orderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature
+              })
+            });
+            const verification = await verifyResponse.json();
+            if (!verifyResponse.ok) throw new Error(verification.error || 'Payment verification failed.');
+            setAdmissionResult(data);
+            setStep(4);
+            confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+          } catch (verificationError) {
+            setError(verificationError.message || 'Payment verification failed.');
+          }
+        },
+        modal: {
+          ondismiss: async () => {
+            try {
+              const cancelResponse = await fetch('/api/admission/payment/cancel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  paymentId: data.paymentId,
+                  orderId: data.checkout.orderId
+                })
+              });
+              const cancelData = await cancelResponse.json();
+              if (!cancelResponse.ok) {
+                throw new Error(cancelData.error || 'Unable to cancel the pending admission.');
+              }
+              setError('Payment was cancelled. You can submit the admission form again.');
+            } catch (cancelError) {
+              setError('Payment was cancelled. Please try again after refreshing the page.');
+            }
+          }
+        }
+      });
+      razorpay.open();
     } catch (err) {
       setError(err.message || 'Something went wrong during checkout.');
     } finally {
@@ -380,6 +444,21 @@ export const AdmissionModal = ({ isOpen, onClose, preselectedProgram, defaultPro
                   <p><span className="text-slate-400">Program:</span> {formData.program}</p>
                   <p><span className="text-slate-400">Email:</span> {formData.email}</p>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Admission Payment Amount (INR)</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={formData.paymentAmount}
+                  onChange={(e) => setFormData({ ...formData, paymentAmount: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  placeholder="Enter the amount to pay"
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1.5">You can pay up to the selected program fee.</p>
               </div>
 
               <div>

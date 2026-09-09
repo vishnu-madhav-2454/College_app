@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { initPostgresDB, pool } from './db/pgPool.js';
+import { initPostgresDB } from './db/databaseInitializer.js';
 
 import authRoutes from './routes/authRoutes.js';
 import admissionRoutes from './routes/admissionRoutes.js';
@@ -29,28 +29,6 @@ app.use('/api/teacher', teacherRoutes);
 app.use('/api/jl', juniorLecturerRoutes);
 app.use('/api/public', publicRoutes);
 
-// Health check
-app.get('/api/health', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT version(), current_database() AS database, NOW() AS server_time');
-    res.json({
-      status: 'online',
-      database: result.rows[0].database,
-      postgresVersion: result.rows[0].version,
-      host: process.env.PGHOST || 'localhost',
-      port: Number(process.env.PGPORT || 5432),
-      timestamp: new Date().toISOString(),
-      postgresTime: result.rows[0].server_time,
-      service: 'Apex Academy JEE/NEET/EAMCET Management API'
-    });
-  } catch (error) {
-    res.status(503).json({
-      status: 'degraded',
-      database: 'unavailable',
-      error: 'PostgreSQL connection failed'
-    });
-  }
-});
 
 // Initialize PostgreSQL database and start listening
 initPostgresDB().then(() => {

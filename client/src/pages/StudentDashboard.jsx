@@ -79,20 +79,69 @@ export const StudentDashboard = () => {
         body: JSON.stringify({
           amount: Number(payAmount),
           installmentName: 'Online Term Installment Fee',
-          paymentMethod: 'UPI / NetBanking'
+          paymentMethod: 'Razorpay',
+          provider: 'razorpay'
         })
       });
       const data = await res.json();
-      if (res.ok) {
-        setPaySuccessMsg('Payment Successful! Receipt generated.');
-        setTimeout(() => {
-          setIsPayModalOpen(false);
-          setPaySuccessMsg('');
-          fetchAllStudentData();
-        }, 1200);
+      if (!res.ok) {
+        throw new Error(data.error || 'Payment failed.');
       }
+
+      if (data.payment?.status === 'Paid') {
+        setPaySuccessMsg('Payment successful! Receipt generated.');
+        setIsPayModalOpen(false);
+        await fetchAllStudentData();
+        return;
+      }
+
+      if (!window.Razorpay || !data.checkout?.orderId) {
+        throw new Error('Razorpay Checkout is unavailable. Please refresh and try again.');
+      }
+
+      const razorpay = new window.Razorpay({
+        key: data.checkout.keyId,
+        amount: data.checkout.amountInPaise,
+        currency: data.checkout.currency,
+        name: 'Apex Academy',
+        description: data.payment.installmentName,
+        order_id: data.checkout.orderId,
+        method: {
+          upi: true,
+          card: true,
+          netbanking: true,
+          wallet: true
+        },
+        prefill: { name: user?.name, email: user?.email },
+        handler: async (response) => {
+          try {
+            const verifyResponse = await fetch('/api/student/fees/pay/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                receiptId: data.payment.id,
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature
+              })
+            });
+            const verification = await verifyResponse.json();
+            if (!verifyResponse.ok) throw new Error(verification.error || 'Payment verification failed.');
+            setPaySuccessMsg('Payment successful! Receipt generated.');
+            setIsPayModalOpen(false);
+            await fetchAllStudentData();
+          } catch (verificationError) {
+            setPaySuccessMsg(verificationError.message || 'Payment verification failed.');
+          }
+        },
+        modal: { ondismiss: () => setPaySuccessMsg('Payment was cancelled.') }
+      });
+      razorpay.open();
     } catch (err) {
-      console.error(err);
+      setPaySuccessMsg(err.message || 'Payment failed.');
     } finally {
       setIsPaying(false);
     }

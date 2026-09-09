@@ -1,0 +1,53 @@
+              FRONTEND
+                  │
+                  │ 1. Submit admission form
+                  ↓
+          POST /admission
+                  │
+                  ↓
+        applyAdmission()
+                  │
+        ┌─────────┴─────────┐
+        ↓                   ↓
+   Validate data       Check branch
+        │                   │
+        └─────────┬─────────┘
+                  ↓
+          Generate IDs
+                  ↓
+          Hash password
+                  ↓
+       Create Razorpay order
+                  ↓
+        Insert DB records
+                  ↓
+             COMMIT
+                  ↓
+       Send checkout info
+                  │
+                  ↓
+              FRONTEND
+                  │
+                  ↓
+        Open Razorpay UI
+                  │
+                  ↓
+            User pays
+                  │
+                  ↓
+       Frontend gets payment
+       details from Razorpay
+                  │
+                  ↓
+      POST /verify-payment
+                  │
+                  ↓
+    verifyAdmissionPayment()
+                  ↓
+       Verify signature
+                  ↓
+       Update payment = Paid
+                  ↓
+       Update student paid_fee
+                  ↓
+               COMMIT

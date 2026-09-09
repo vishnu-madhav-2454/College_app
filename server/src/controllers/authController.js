@@ -1,36 +1,22 @@
-import { pool, checkPassword } from '../db/pgPool.js';
+import { pool, checkPassword } from '../db/connection.js';
 import { generateToken } from '../middleware/auth.js';
 
 export const login = async (req, res) => {
   try {
-    const { identifier, password } = req.body;
+    const { email, password } = req.body;
 
-    if (!identifier || !password) {
-      return res.status(400).json({ error: 'Please provide email or enrollment ID and password' });
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Please provide email and password' });
     }
 
-    const rawId = identifier.trim();
-    const cleanId = rawId.toLowerCase();
-    const phoneNormalized = rawId.replace(/[\s-]/g, '');
+    const cleanEmail = email.trim().toLowerCase();
 
-    let userQuery = await pool.query(
-      `SELECT u.*, s.id as student_id, s.enrollment_no, s.program, s.program_name, s.section, s.branch_id, s.branch_name, s.total_fee, s.paid_fee, s.subjects as student_subjects
-       FROM users u
-       JOIN students s ON s.user_id = u.id
-       WHERE LOWER(s.enrollment_no) = $1`,
-      [cleanId]
+    const userQuery = await pool.query(
+      `SELECT *
+       FROM users
+       WHERE LOWER(email) = $1`,
+      [cleanEmail]
     );
-
-    if (userQuery.rows.length === 0) {
-      userQuery = await pool.query(
-        `SELECT u.*, s.id as student_id, s.enrollment_no, s.program, s.program_name, s.section, s.branch_id, s.branch_name, s.total_fee, s.paid_fee, s.subjects as student_subjects
-         FROM users u
-         LEFT JOIN students s ON s.user_id = u.id
-         WHERE LOWER(u.email) = $1
-            OR REPLACE(REPLACE(COALESCE(u.phone, ''), ' ', ''), '-', '') = $2`,
-        [cleanId, phoneNormalized]
-      );
-    }
 
     if (userQuery.rows.length === 0) {
       return res.status(401).json({ error: 'No account found with these credentials' });
@@ -47,21 +33,29 @@ export const login = async (req, res) => {
     let studentProfile = null;
     let teacherProfile = null;
 
-    if (userRow.role === 'student' && userRow.student_id) {
-      studentProfile = {
-        id: userRow.student_id,
-        userId: userRow.id,
-        name: userRow.name,
-        enrollmentNo: userRow.enrollment_no,
-        program: userRow.program,
-        programName: userRow.program_name,
-        section: userRow.section,
-        branchId: userRow.branch_id,
-        branchName: userRow.branch_name,
-        totalFee: parseFloat(userRow.total_fee),
-        paidFee: parseFloat(userRow.paid_fee),
-        subjects: typeof userRow.student_subjects === 'string' ? JSON.parse(userRow.student_subjects) : userRow.student_subjects
-      };
+    if (userRow.role === 'student') {
+      const studentQuery = await pool.query(
+        `SELECT * FROM students WHERE user_id = $1`,
+        [userRow.id]
+      );
+
+      if (studentQuery.rows.length > 0) {
+        const student = studentQuery.rows[0];
+        studentProfile = {
+          id: student.id,
+          userId: userRow.id,
+          name: userRow.name,
+          enrollmentNo: student.enrollment_no,
+          program: student.program,
+          programName: student.program_name,
+          section: student.section,
+          branchId: student.branch_id,
+          branchName: student.branch_name,
+          totalFee: parseFloat(student.total_fee),
+          paidFee: parseFloat(student.paid_fee),
+          subjects: typeof student.subjects === 'string' ? JSON.parse(student.subjects) : student.subjects
+        };
+      }
     } else if (userRow.role === 'teacher') {
       const facQuery = await pool.query(`SELECT * FROM faculty WHERE name = $1`, [userRow.name]);
       if (facQuery.rows.length > 0) {

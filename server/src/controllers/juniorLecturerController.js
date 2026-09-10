@@ -1,5 +1,4 @@
 import { pool } from '../db/connection.js';
-import { sendParentResultMessage } from '../services/smsService.js';
 
 // Returns today's date string in IST (YYYY-MM-DD) regardless of server timezone
 const getTodayIST = () => {
@@ -299,23 +298,11 @@ export const saveJLTestMarksBulk = async (req, res) => {
       );
 
       savedCount += 1;
-
-      const notificationResult = await sendParentResultMessage({
-        parentPhone: student.parent_phone,
-        studentName: student.name || student.enrollment_no,
-        testName: test.name,
-        totalObtained,
-        totalMax: test.total_marks,
-        percentage,
-        remarks,
-      });
-
-      console.log(`📲 Parent notification for ${student.name}:`, notificationResult);
     }
 
     return res.json({
       success: true,
-      message: `Successfully saved marks for ${savedCount} students in ${test.name} to PostgreSQL. Parent notifications were queued for each saved score.`
+      message: `Successfully saved marks for ${savedCount} students in ${test.name} to PostgreSQL.`
     });
   } catch (error) {
     console.error('saveJLTestMarksBulk error:', error);
